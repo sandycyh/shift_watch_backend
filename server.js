@@ -2,14 +2,12 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import path from 'path';
-import { fileURLToPath } from 'url';
+import { query } from './db.js'; 
 
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT;
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 app.use(cors());
 app.use(express.json());
@@ -23,16 +21,34 @@ app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok', message: 'Staff record backend is running' });
 });
 
-app.use(express.static(path.join(__dirname, 'public')));
+app.get('/api/record', async (_req, res) => {
+  try{
+    const rows = await query('SELECT * FROM Staffing_Record'); 
+    console.log('this is working')
+    res.json(rows);
+  } catch (err) { 
+    console.error('DB query error', err ); 
+    res.status(500).json({ message: 'Database error' });
+  }
+})
 
 app.get('*', (req, res) => {
   if (req.path.startsWith('/api/')) {
     return res.status(404).json({ message: 'API endpoint not found' });
   }
-
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-app.listen(PORT, () => {
-  console.log(`Backend listening on http://localhost:${PORT}`);
-});
+async function start() {
+  try {
+    // The import of ./db.js already starts pool.connect(); awaiting a quick test query ensures connectivity
+    await query('SELECT 1 AS ok');
+    app.listen(PORT, () => {
+      console.log(`Backend listening on http://localhost:${PORT}`);
+    });
+  } catch (err) {
+    console.error('Failed to connect to DB:', err);
+    process.exit(1);
+  }
+}
+
+start();
