@@ -25,16 +25,6 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', message: 'Staff record backend is running' });
 });
 
-app.get('/api/record', async (req, res) => {
-  try{
-    const rows = await query('SELECT * FROM Staffing_Record'); 
-    res.json(rows);
-  } catch (err) { 
-    console.error('DB query error', err ); 
-    res.status(500).json({ message: 'Database error' });
-  }
-})
-
 
 app.get('*', (req, res) => {
   if (req.path.startsWith('/api/')) {
