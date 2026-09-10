@@ -18,7 +18,7 @@ const router = Router();
 router.get('/:date/:shift', async (req, res) => {
   try {
     const { date, shift } = req.params;
-    const Shifts = await getShift('1', '1');
+    const Shifts = await getShift(date, shift);
     res.json(Shifts);
   } catch (err) {
     console.error('DB query error', err);

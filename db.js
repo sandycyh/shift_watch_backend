@@ -49,21 +49,24 @@ export async function getPool() {
     }
 }
 
-export async function getShift(shiftId, wardId) {
+export async function getShift(shiftDate, shiftType) {
     try {
         const pool = await getPool();
         const result = await pool.request()
-            .input('shift_id', sql.Int, shiftId)
-            .input('id', sql.Int, wardId)
+            .input('shift_date', sql.Date, shiftDate)
+            .input('shift_type', sql.VarChar, shiftType)
             .query(`USE staffing_data
                     SELECT  w.ward_name, s.shift_date, s.shift_type, sr.RN_count, 
-		                    sr.EN_count, sr.AIN_count, sr.permanent_count, 
-                            sr.planned_staff, sr.actual_staff, sr.NUM_present
+                            sr.EN_count, sr.AIN_count, sr.permanent_count, 
+                            sr.casual_count, sr.agency_count,
+                            sr.planned_staff, sr.actual_staff, sr.NUM_present,
+                            sr.unfilled_pos
                     FROM SHIFT as s 
                     JOIN Staffing_Record AS sr 
-                    ON s.id = @shift_id
+                    ON sr.shift_id = s.id
                     JOIN Ward as w
-                    ON s.ward_id = @id`);
+                    ON w.id = s.ward_id
+                    WHERE s.shift_date = @shift_date AND s.shift_type = @shift_type`);
 
         return result.recordset[0];
     } catch (error) {
