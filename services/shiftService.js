@@ -79,12 +79,11 @@ export async function getWeeklyReportData(weekValue) {
     return [];
   }
 
-  try {
-    const pool = await getPool();
-    const result = await pool.request()
-      .input('startDate', sql.Date, range.startDate)
-      .input('endDate', sql.Date, range.endDate)
-      .query(`USE shift_watch_db
+  const pool = await getPool();
+  const result = await pool.request()
+    .input('startDate', sql.Date, range.startDate)
+    .input('endDate', sql.Date, range.endDate)
+    .query(`USE shift_watch_db
         SELECT
           s.shift_date,
           s.shift_type,
@@ -108,13 +107,9 @@ export async function getWeeklyReportData(weekValue) {
         INNER JOIN Ward w ON w.id = s.ward_id
         WHERE w.ward_name = '5East'
           AND s.shift_date BETWEEN @startDate AND @endDate
-        ORDER BY s.shift_date, s.shift_type`);
+      ORDER BY s.shift_date, s.shift_type`);
 
-    return result.recordset ?? [];
-  } catch (error) {
-    console.error('Weekly report query error:', error.message);
-    return [];
-  }
+  return result.recordset ?? [];
 }
 
 async function getNextTableId(tableName) {
