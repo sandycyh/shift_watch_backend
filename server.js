@@ -10,7 +10,6 @@ dotenv.config();
 
 const app = express();
 const PORT = Number(process.env.PORT || 4000);
-const HOST = process.env.HOST || '0.0.0.0';
 
 app.use(cors());
 app.use(express.json());
@@ -37,8 +36,8 @@ async function start() {
   try {
     // The import of ./db.js already starts pool.connect(); awaiting a quick test query ensures connectivity
     await query('SELECT 1 AS ok');
-    app.listen(PORT, HOST, () => {
-      console.log(`Backend listening on http://${HOST}:${PORT}`);
+    app.listen(PORT, () => {
+      console.log(`Backend listening on port ${PORT}`);
     });
   } catch (err) {
     console.error('Failed to connect to DB:', err);
