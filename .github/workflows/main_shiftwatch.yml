@@ -47,7 +47,16 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: node-app
-      
+          
+      - name: Check downloaded files
+        run: |
+          echo "Workspace contents:"
+          Get-ChildItem -Force
+          echo "Checking required backend files:"
+          Test-Path server.js
+          Test-Path package.json
+        shell: pwsh
+        
       - name: Login to Azure
         uses: azure/login@v2
         with:
