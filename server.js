@@ -9,7 +9,7 @@ import getShiftRoutes from './routes/shift.routes.js'
 dotenv.config();
 
 const app = express();
-const PORT = Number(process.env.PORT || 4000);
+const PORT = Number(process.env.PORT);
 
 app.use(cors());
 app.use(express.json());
@@ -41,7 +41,7 @@ async function start() {
     });
   } catch (err) {
     console.error('Failed to connect to DB:', err);
-    process.exit(1);
+    //process.exit(1);
   }
 }
 
