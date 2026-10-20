@@ -1,15 +1,14 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
-import path from 'path';
-import { query } from './db.js'; 
-import { getPool } from './db.js';
+import { query } from './db.js';
 
 import getShiftRoutes from './routes/shift.routes.js'
 dotenv.config();
 
 const app = express();
-const PORT = Number(process.env.PORT);
+const PORT = Number(process.env.PORT || 4000);
+let databaseReady = false;
 
 app.use(cors());
 app.use(express.json());
@@ -22,7 +21,10 @@ app.get('/', (req, res) => {
 app.use('/api/shift', getShiftRoutes)
 
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', message: 'Staff record backend is running' });
+  res.status(databaseReady ? 200 : 503).json({
+    status: databaseReady ? 'ok' : 'unavailable',
+    message: databaseReady ? 'Backend and database are running' : 'Backend is running but database is unavailable',
+  });
 });
 
 
@@ -33,15 +35,16 @@ app.get('*', (req, res) => {
 });
 
 async function start() {
+  app.listen(PORT, () => {
+    console.log(`Backend listening on port ${PORT}`);
+  });
+
   try {
-    // The import of ./db.js already starts pool.connect(); awaiting a quick test query ensures connectivity
     await query('SELECT 1 AS ok');
-    app.listen(PORT, () => {
-      console.log(`Backend listening on port ${PORT}`);
-    });
+    databaseReady = true;
+    console.log('Database connection established');
   } catch (err) {
-    console.error('Failed to connect to DB:', err);
-    //process.exit(1);
+    console.error('Database connection failed; HTTP server remains available:', err);
   }
 }
 
