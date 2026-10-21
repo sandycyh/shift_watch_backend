@@ -14,6 +14,8 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+console.log('[STARTUP] server.js is loading');
+
 app.get('/', (req, res) => {
   res.send('API is alive');
 });
@@ -34,8 +36,11 @@ app.get('*', (req, res) => {
   }
 });
 
+console.log('[STARTUP] About to start Express');
+
 async function start() {
   app.listen(PORT, () => {
+    console.log('[STARTUP] Express is listening');
     console.log(`Backend listening on port ${PORT}`);
   });
 
