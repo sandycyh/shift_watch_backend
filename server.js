@@ -8,6 +8,7 @@ dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 4000;
+console.log('[DIAGNOSTIC] process.env.PORT =', process.env.PORT);
 let databaseReady = false;
 
 app.use(cors());
