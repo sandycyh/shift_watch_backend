@@ -32,8 +32,12 @@ app.get('/api/health', (req, res) => {
 
 app.get('*', (req, res) => {
   if (req.path.startsWith('/api/')) {
-    return res.status(404).json({ message: 'API endpoint not found' });
+    return res.status(404).json({
+      message: 'API endpoint not found'
+    });
   }
+
+  return res.status(404).send('Not found');
 });
 
 console.log('[STARTUP] About to start Express');
