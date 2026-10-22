@@ -7,7 +7,7 @@ import getShiftRoutes from './routes/shift.routes.js'
 dotenv.config();
 
 const app = express();
-const PORT = process.env.PORT || 4001;
+const PORT = process.env.PORT || 4000;
 console.log('[DIAGNOSTIC] process.env.PORT =', process.env.PORT);
 let databaseReady = false;
 

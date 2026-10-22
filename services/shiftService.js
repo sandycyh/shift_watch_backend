@@ -60,10 +60,13 @@ export async function getShift(shiftDate, shiftType) {
           sr.permanent_count, sr.casual_agency_count,
           sr.IPS_planned, sr.IPS_actual, sr.TL, sr.TL_pt_load,
           sr.planned_staff, sr.actual_staff, sr.NUM_present,
-          sr.unfilled_pos, sr.comments
+          sr.unfilled_pos, sr.comments,
+          pa.admission, pa.discharge, pa.high_acuity, pa.high_dependency,
+          pa.specials_1to1, pa.falls_risk, pa.behavioural_patients
         FROM Shift as s
         JOIN Staffing_Record AS sr ON sr.shift_id = s.id
         JOIN Ward as w ON w.id = s.ward_id
+        LEFT JOIN Patient_Acuity AS pa ON pa.shift_id = s.id
         WHERE s.shift_date = @shift_date AND s.shift_type = @shift_type`);
 
     return result.recordset[0] ?? null;
@@ -117,6 +120,43 @@ async function getNextTableId(tableName) {
   const result = await pool.request().query(`USE shift_watch_db
     SELECT ISNULL(MAX(id), 0) + 1 AS nextId FROM ${tableName}`);
   return result.recordset[0].nextId;
+}
+
+function getAcuityValues(payload = {}) {
+  return {
+    admission: toInt(payload.admission),
+    discharge: toInt(payload.discharge),
+    high_acuity: toInt(payload.high_acuity),
+    high_dependency: toInt(payload.high_dependency),
+    specials_1to1: toInt(payload.specials_1to1),
+    falls_risk: toInt(payload.falls_risk),
+    behavioural_patients: toInt(payload.behavioural_patients),
+  };
+}
+
+async function insertPatientAcuity(pool, shiftId, payload = {}) {
+  const values = getAcuityValues(payload);
+  const nextId = await getNextTableId('Patient_Acuity');
+
+  await pool.request()
+    .input('id', sql.Int, nextId)
+    .input('shift_id', sql.Int, shiftId)
+    .input('admission', sql.Int, values.admission)
+    .input('discharge', sql.Int, values.discharge)
+    .input('high_acuity', sql.Int, values.high_acuity)
+    .input('high_dependency', sql.Int, values.high_dependency)
+    .input('specials_1to1', sql.Int, values.specials_1to1)
+    .input('falls_risk', sql.Int, values.falls_risk)
+    .input('behavioural_patients', sql.Int, values.behavioural_patients)
+    .query(`USE shift_watch_db
+      INSERT INTO Patient_Acuity (
+        id, shift_id, admission, discharge, total_patients,
+        high_dependency, high_acuity, specials_1to1, falls_risk, behavioural_patients
+      )
+      VALUES (
+        @id, @shift_id, @admission, @discharge, 0,
+        @high_dependency, @high_acuity, @specials_1to1, @falls_risk, @behavioural_patients
+      )`);
 }
 
 export async function getWardIDByName(wardName) {
@@ -206,6 +246,8 @@ export async function createShiftRecord(payload = {}) {
         @unfilled_pos, @comments
       )`);
 
+  await insertPatientAcuity(pool, shiftId, payload);
+
   return {
     wardId: ward.id,
     shiftId,
@@ -258,5 +300,51 @@ export async function updateShiftRecord(shiftDate, shiftType, payload = {}) {
         AND s.shift_type = @shift_type
         AND w.ward_name = @ward_name`);
 
-  return result.rowsAffected[0] > 0;
+  if (result.rowsAffected[0] === 0) {
+    return false;
+  }
+
+  const shiftResult = await pool.request()
+    .input('shift_date', sql.Date, formatSqlDate(shiftDate))
+    .input('shift_type', sql.VarChar(20), String(shiftType).toUpperCase())
+    .input('ward_name', sql.NVarChar(100), String(payload.ward_name || '5East'))
+    .query(`USE shift_watch_db
+      SELECT s.id
+      FROM Shift s
+      INNER JOIN Ward w ON w.id = s.ward_id
+      WHERE s.shift_date = @shift_date
+        AND s.shift_type = @shift_type
+        AND w.ward_name = @ward_name`);
+
+  const shiftId = shiftResult.recordset[0]?.id;
+  if (!shiftId) {
+    return false;
+  }
+
+  const acuityValues = getAcuityValues(payload);
+  const acuityUpdate = await pool.request()
+    .input('shift_id', sql.Int, shiftId)
+    .input('admission', sql.Int, acuityValues.admission)
+    .input('discharge', sql.Int, acuityValues.discharge)
+    .input('high_acuity', sql.Int, acuityValues.high_acuity)
+    .input('high_dependency', sql.Int, acuityValues.high_dependency)
+    .input('specials_1to1', sql.Int, acuityValues.specials_1to1)
+    .input('falls_risk', sql.Int, acuityValues.falls_risk)
+    .input('behavioural_patients', sql.Int, acuityValues.behavioural_patients)
+    .query(`USE shift_watch_db
+      UPDATE Patient_Acuity
+      SET admission = @admission,
+          discharge = @discharge,
+          high_acuity = @high_acuity,
+          high_dependency = @high_dependency,
+          specials_1to1 = @specials_1to1,
+          falls_risk = @falls_risk,
+          behavioural_patients = @behavioural_patients
+      WHERE shift_id = @shift_id`);
+
+  if (acuityUpdate.rowsAffected[0] === 0) {
+    await insertPatientAcuity(pool, shiftId, payload);
+  }
+
+  return true;
 }
