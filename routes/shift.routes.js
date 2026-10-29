@@ -12,6 +12,10 @@ router.post('/', async (req, res) => {
       data: created,
     });
   } catch (err) {
+    if (err.code === 'SHIFT_ALREADY_EXISTS') {
+      return res.status(409).json({ message: err.message });
+    }
+
     console.error('DB insert error', err);
     res.status(500).json({ message: 'Failed to save shift', error: err.message });
   }
